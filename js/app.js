@@ -4,7 +4,7 @@ import { loadArt, img, Paths, C, ROBOT_COLORS, drawFit, drawStretch, drawTiled, 
 import { drawRobot, pose, drawMobilityThumb, drawArmThumb, G } from './robot.js';
 import { drawMission, newCamera, theme } from './scene.js';
 
-const VERSION = '1.5.6-web';
+const VERSION = '1.5.7-web';
 
 // ---- Szövegek ------------------------------------------------------------------------------
 let STR = {};
@@ -260,7 +260,7 @@ function paint(c) {
 function gameButton(text, iconName, onClick, { color = 'orange', full = false, minH = 60, disabled = false } = {}) {
   const pill = { orange: 'button_orange', blue: 'button_blue', green: 'button_green', grey: 'button_grey' }[color];
   const btn = h('button', { class: 'game-btn' + (full ? ' full' : '') + (disabled ? ' disabled' : '') + (pill ? '' : ' plain'), style: { minHeight: minH + 'px', '--c': color } },
-    iconName ? icon(iconName) : null, h('span', {}, text));
+    iconName ? (typeof iconName === 'string' ? icon(iconName) : iconName) : null, h('span', {}, text));
   if (pill && img('ui/' + pill)) {
     btn.prepend(canvas((g, w, hh) => drawPill(g, img('ui/' + pill), w, hh), { cls: 'pill' }));
   } else if (pill) btn.style.background = { orange: C.ButtonOrange, blue: C.ButtonBlue, green: C.ButtonGreen, grey: '#6B7A90' }[color];
@@ -337,10 +337,21 @@ function worldsScreen() {
     h('div', { class: 't-m soft' }, t('language')),
     ...LANGS.map(([code, label]) => h('button', { class: 'lang-chip' + (code === lang ? ' sel' : ''), onclick: () => setLang(code) }, label)),
     h('div', { class: 'grow' }),
-    document.fullscreenEnabled ? gameButton(t('fullscreen'), 'play', toggleFullscreen, { color: 'grey', minH: 52 }) : null);
+    document.fullscreenEnabled ? gameButton(t('fullscreen'), fullscreenIcon(), toggleFullscreen, { color: 'grey', minH: 52 }) : null);
   return h('div', { class: 'screen', style: { background: `linear-gradient(${C.SkyLight}, ${C.Cream})` } }, header,
     h('div', { class: 'scroll grow', style: { display: 'flex', flexDirection: 'column', gap: '12px' } }, grid, langRow));
 }
+/** Fehér teljesképernyő-jel: négy sarok (teljes képernyőn befelé mutat). */
+function fullscreenIcon() {
+  const inside = !!document.fullscreenElement;
+  const d = inside
+    ? 'M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6'
+    : 'M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6';
+  const wrap = h('span', { class: 'ico', style: { display: 'inline-flex' } });
+  wrap.innerHTML = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+  return wrap;
+}
+document.addEventListener('fullscreenchange', () => { if (state.screen.k === 'worlds') render(); });
 function toggleFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});

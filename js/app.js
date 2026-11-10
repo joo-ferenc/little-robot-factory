@@ -4,7 +4,7 @@ import { loadArt, img, Paths, C, ROBOT_COLORS, drawFit, drawStretch, drawTiled, 
 import { drawRobot, pose, drawMobilityThumb, drawArmThumb, G } from './robot.js';
 import { drawMission, newCamera, theme } from './scene.js';
 
-const VERSION = '1.5.5-web';
+const VERSION = '1.5.6-web';
 
 // ---- Szövegek ------------------------------------------------------------------------------
 let STR = {};
@@ -641,7 +641,7 @@ function partsPanel(robot) {
     ...E.HEADS.map((hd) => {
       const sel = robot.head === hd;
       const b = h('button', { class: 'head-chip' + (sel ? ' sel' : ''), 'aria-label': hd },
-        canvas((g, w, hh) => drawRobot(g, { ...robot, head: hd }, pose(), w / 2, hh * 2.6, hh * 2.25, 0, false)));
+        canvas((g, w, hh) => drawRobot(g, { ...robot, head: hd, mobility: 'wheels' }, pose(), w / 2, hh * 1.84, hh * 1.7, 0, false)));
       b.addEventListener('click', () => updateRobot({ ...robot, head: hd }));
       return b;
     }));

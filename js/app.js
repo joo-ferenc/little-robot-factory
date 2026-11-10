@@ -4,7 +4,7 @@ import { loadArt, img, Paths, C, ROBOT_COLORS, drawFit, drawStretch, drawTiled, 
 import { drawRobot, pose, drawMobilityThumb, drawArmThumb, G } from './robot.js';
 import { drawMission, newCamera, theme } from './scene.js';
 
-const VERSION = '1.5.4-web';
+const VERSION = '1.5.5-web';
 
 // ---- Szövegek ------------------------------------------------------------------------------
 let STR = {};
@@ -882,7 +882,16 @@ async function main() {
   try { await document.fonts.ready; } catch (e) { /* */ }
   render();
   loop();
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    // új változat: ha az új offline-tároló átvette az oldalt, egyszer újratöltünk
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded || state.screen.k === 'run') return;
+      reloaded = true; location.reload();
+    });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((r) => r.update()).catch(() => {});
+  }
 }
 main();
 

@@ -4,7 +4,7 @@ import { loadArt, img, Paths, C, ROBOT_COLORS, drawFit, drawStretch, drawTiled, 
 import { drawRobot, pose, drawMobilityThumb, drawArmThumb, G } from './robot.js';
 import { drawMission, newCamera, theme } from './scene.js';
 
-const VERSION = '1.5.2-web';
+const VERSION = '1.5.4-web';
 
 // ---- Szövegek ------------------------------------------------------------------------------
 let STR = {};
@@ -317,7 +317,7 @@ function render() {
 
 // --- Világok
 function worldsScreen() {
-  const W = window.innerWidth; const H = window.innerHeight;
+  const W = window.innerWidth; const H = appH();
   const wide = W >= 560; const portrait = H > W;
   const cols = portrait ? (W >= 600 ? 3 : 2) : 3;
   const total = state.missions.length;
@@ -523,7 +523,7 @@ function workshopScreen(index) {
   const teamSize = Math.min(Math.max(1, m.team), state.team.length);
   state.selected = Math.min(Math.max(0, state.selected), teamSize - 1);
   const robot = state.team[state.selected];
-  const portrait = window.innerHeight > window.innerWidth;
+  const portrait = appH() > window.innerWidth;
   const failures = state.failures[m.id] || 0;
   const showHint = m.hard || failures >= 1;
   const header = h('div', { class: 'row', style: { gap: '14px' } },
@@ -536,7 +536,7 @@ function workshopScreen(index) {
     m.isTeam ? teamBar(m) : null,
     robotStage(robot),
     garagePanel(robot));
-  if (portrait) left.querySelector('.stage').style.setProperty('--stage-h', (window.innerHeight * (m.isTeam ? 0.24 : 0.30)) + 'px');
+  if (portrait) left.querySelector('.stage').style.setProperty('--stage-h', (appH() * (m.isTeam ? 0.22 : 0.28)) + 'px');
   const body = h('div', { class: 'ws-body' }, left, h('div', { class: 'ws-right scroll' }, partsPanel(robot)));
   return h('div', { class: 'screen' }, header,
     portrait && m.obstacles.length ? h('div', { style: { alignSelf: 'center' } }, obstacleStrip(m)) : null,
@@ -567,7 +567,7 @@ function teamBar(m) {
     tabs.append(tab);
   }
   return h('div', { class: 'panel', style: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '8px' } }, tabs,
-    h('div', { class: 'row', style: { gap: '6px' } }, icon('team', 'ico-s'), h('div', { class: 'b-m soft clamp2' }, t(m.isLanes ? 'team_lanes_info' : 'team_relay_info'))));
+    h('div', { class: 'row team-info', style: { gap: '6px' } }, icon('team', 'ico-s'), h('div', { class: 'b-m soft clamp2' }, t(m.isLanes ? 'team_lanes_info' : 'team_relay_info'))));
 }
 function robotStage(robot) {
   let popStart = performance.now();
@@ -614,7 +614,7 @@ function garagePanel(robot) {
 }
 function partsPanel(robot) {
   const avail = available();
-  const W = (window.innerHeight > window.innerWidth ? window.innerWidth - 32 : (window.innerWidth - 48) * 0.62);
+  const W = (appH() > window.innerWidth ? window.innerWidth - 32 : (window.innerWidth - 48) * 0.62);
   const colsFor = (n) => Math.max(2, Math.min(n, Math.floor(W / 104)));
   const card = (id, sel, locked, onClick, height, pic) => {
     const c = h('button', { class: 'part-card' + (sel ? ' sel' : '') + (locked ? ' locked' : ''), style: { height: height + 'px' }, 'aria-label': locked ? `${partName(id)} – ${t('workshop_locked')}` : partName(id) },
@@ -850,13 +850,22 @@ function resetProgress() {
   persist(); go({ k: 'worlds' });
 }
 
+// ---- Látható magasság (a beépített böngészők – pl. Messenger – sávjai nélkül)
+function setAppHeight() {
+  const hgt = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty('--app-h', Math.round(hgt) + 'px');
+}
+const appH = () => (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+setAppHeight();
+window.visualViewport?.addEventListener('resize', () => { setAppHeight(); clearTimeout(resizeT); resizeT = setTimeout(() => { if (state.screen.k !== 'run') render(); }, 150); });
+
 // ---- Fő ciklus -----------------------------------------------------------------------------
 function loop() {
   for (const c of liveCanvases) paint(c);
   raf = requestAnimationFrame(loop);
 }
 let resizeT = 0;
-window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (state.screen.k !== 'run') render(); else liveCanvases.forEach(paint); }, 120); });
+window.addEventListener('resize', () => { setAppHeight(); clearTimeout(resizeT); resizeT = setTimeout(() => { if (state.screen.k !== 'run') render(); else liveCanvases.forEach(paint); }, 120); });
 
 async function main() {
   const fill = document.getElementById('loadFill');

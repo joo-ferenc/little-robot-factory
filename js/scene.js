@@ -390,7 +390,7 @@ function drawObstacleBackImage(g, S, m, o, p, v, s, e, links) {
 // ---- Elülső réteg --------------------------------------------------------------------------
 
 const CR = {
-  IMG_W: 333, PULLEY_X: 288, PULLEY_Y: 80, PULLEY_L: 242, PULLEY_T: 37, PULLEY_R: 333, PULLEY_B: 127,
+  IMG_W: 333, PULLEY_X: 288, PULLEY_Y: 80, PULLEY_L: 228, PULLEY_T: 37, PULLEY_R: 331, PULLEY_B: 135,
   HOOK_W: 56, HOOK_H: 114, HOOK_ROPE_X: 0.518, HOOK_GRIP_X: 0.49, HOOK_GRIP_Y: 0.92, HOOK_HOME_Y: 232, RAISED_DEG: 45, LOWER_END: 0.75,
 };
 

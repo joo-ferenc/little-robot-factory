@@ -1,8 +1,10 @@
-# Little Robot Factory – webes változat (1.5.7)
+# Little Robot Factory – webes változat (1.5.8)
 
 Böngészőben futó változat: ugyanaz a 12 világ, 240 küldetés, a műhely, a csapatok, a tippek, a három nyelv
 (magyar, német, angol), és a mozgó kerekek, lánctalp és póklábak, mint az Android-játékban.
 A haladás a böngészőben marad (localStorage), az első betöltés után internet nélkül is játszható.
+
+**1.5.8:** iPhone: a „Teljes képernyő” gomb elmagyarázza a kezdőképernyőre tételt (az iPhone böngészője nem enged teljes képernyőt); új „Fekvő nézet” gomb, amely álló telefonon is fekvőben mutatja a játékot.
 
 **1.5.7:** a „Teljes képernyő” gombon nyíl helyett fehér négy-sarok jel.
 

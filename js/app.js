@@ -4,14 +4,23 @@ import { loadArt, img, Paths, C, ROBOT_COLORS, drawFit, drawStretch, drawTiled, 
 import { drawRobot, pose, drawMobilityThumb, drawArmThumb, G } from './robot.js';
 import { drawMission, newCamera, theme } from './scene.js';
 
-const VERSION = '1.5.7-web';
+const VERSION = '1.5.8-web';
 
 // ---- Szövegek ------------------------------------------------------------------------------
 let STR = {};
 const LANGS = [['hu', 'Magyar'], ['de', 'Deutsch'], ['en', 'English']];
 const EXTRA = {
   fullscreen: { hu: 'Teljes képernyő', de: 'Vollbild', en: 'Full screen' },
-  rotate: { hu: 'Fordítsd el a készüléket!', de: 'Bitte das Gerät drehen!', en: 'Please rotate your device!' },
+  landscape: { hu: 'Fekvő nézet', de: 'Querformat', en: 'Landscape' },
+  ios_full_title: { hu: 'Teljes képernyő iPhone-on', de: 'Vollbild auf dem iPhone', en: 'Full screen on iPhone' },
+  ios_full_text: {
+    hu: 'iPhone-on a böngésző nem engedi a teljes képernyőt. Tedd a játékot a kezdőképernyőre: Safariban koppints a Megosztás gombra (négyzet felfelé mutató nyíllal), majd válaszd a „Főképernyőhöz adás” pontot. Az ikonról indítva a játék böngészősáv nélkül, teljes képernyőn fut.',
+    de: 'Auf dem iPhone erlaubt der Browser kein Vollbild. Lege das Spiel auf den Home-Bildschirm: In Safari auf „Teilen“ tippen (Quadrat mit Pfeil nach oben) und „Zum Home-Bildschirm“ wählen. Über das Symbol gestartet, läuft das Spiel ohne Browserleiste im Vollbild.',
+    en: 'On iPhone the browser does not allow full screen. Add the game to your Home Screen: in Safari tap Share (square with an arrow), then “Add to Home Screen”. Started from that icon, the game runs full screen without the browser bar.' },
+  ios_rotate_text: {
+    hu: 'Ha a kép nem fordul el fekvőbe, kapcsold ki a tájolászárat a Vezérlőközpontban (lakat nyíllal), vagy kapcsold be a „Fekvő nézet” gombot.',
+    de: 'Dreht sich das Bild nicht ins Querformat, schalte die Ausrichtungssperre im Kontrollzentrum aus (Schloss mit Pfeil) oder tippe auf „Querformat“.',
+    en: 'If the picture does not turn to landscape, switch off Portrait Orientation Lock in Control Center (lock with an arrow), or turn on “Landscape”.' },
 };
 let lang = 'en';
 function t(key, ...args) {
@@ -245,7 +254,8 @@ function canvas(draw, { cls = '', w = null, hgt = null, live = false, style = nu
 }
 function paint(c) {
   if (!c.isConnected) { liveCanvases.delete(c); return; }
-  const r = c.getBoundingClientRect();
+  // offsetWidth/Height: elforgatott (fekvő) nézetben is a vászon saját mérete
+  const r = { width: c.offsetWidth, height: c.offsetHeight };
   if (r.width < 1 || r.height < 1) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   const W = Math.round(r.width * dpr); const H = Math.round(r.height * dpr);
@@ -317,7 +327,7 @@ function render() {
 
 // --- Világok
 function worldsScreen() {
-  const W = window.innerWidth; const H = appH();
+  const W = appW(); const H = appH();
   const wide = W >= 560; const portrait = H > W;
   const cols = portrait ? (W >= 600 ? 3 : 2) : 3;
   const total = state.missions.length;
@@ -337,7 +347,8 @@ function worldsScreen() {
     h('div', { class: 't-m soft' }, t('language')),
     ...LANGS.map(([code, label]) => h('button', { class: 'lang-chip' + (code === lang ? ' sel' : ''), onclick: () => setLang(code) }, label)),
     h('div', { class: 'grow' }),
-    document.fullscreenEnabled ? gameButton(t('fullscreen'), fullscreenIcon(), toggleFullscreen, { color: 'grey', minH: 52 }) : null);
+    !STANDALONE ? gameButton(t('fullscreen'), fullscreenIcon(), toggleFullscreen, { color: 'grey', minH: 52 }) : null,
+    IS_TOUCH && !CAN_LOCK ? gameButton(t('landscape'), rotateIcon(), toggleLandscape, { color: store.forceLandscape ? 'blue' : 'grey', minH: 52 }) : null);
   return h('div', { class: 'screen', style: { background: `linear-gradient(${C.SkyLight}, ${C.Cream})` } }, header,
     h('div', { class: 'scroll grow', style: { display: 'flex', flexDirection: 'column', gap: '12px' } }, grid, langRow));
 }
@@ -352,7 +363,26 @@ function fullscreenIcon() {
   return wrap;
 }
 document.addEventListener('fullscreenchange', () => { if (state.screen.k === 'worlds') render(); });
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_TOUCH = navigator.maxTouchPoints > 0;
+const STANDALONE = window.matchMedia?.('(display-mode: standalone)').matches || window.matchMedia?.('(display-mode: fullscreen)').matches || navigator.standalone === true;
+const CAN_LOCK = !!(document.fullscreenEnabled && screen.orientation && screen.orientation.lock) && !IS_IOS;
+function rotateIcon() {
+  const wrap = h('span', { class: 'ico', style: { display: 'inline-flex' } });
+  wrap.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="11" rx="2.2"/><path d="M8 4.5h5.5a4 4 0 0 1 4 4"/><path d="M15.5 6.5l2 2 2-2"/></svg>';
+  return wrap;
+}
+function toggleLandscape() {
+  store.forceLandscape = !store.forceLandscape;
+  persist(); setAppHeight(); render();
+  if (store.forceLandscape && realH() <= realW()) return;
+}
+function iosFullscreenHelp() {
+  openDialog([h('div', { class: 'h-l' }, t('ios_full_title')), h('div', { class: 'b-l' }, t('ios_full_text')), h('div', { class: 'b-m soft' }, t('ios_rotate_text')),
+    h('div', { class: 'dlg-actions' }, h('button', { class: 'text-btn', onclick: closeDialog }, t('hint_close')))], true);
+}
 function toggleFullscreen() {
+  if (!document.fullscreenEnabled) { iosFullscreenHelp(); return; }
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
 }
@@ -417,7 +447,7 @@ function parentGate() {
 function missionsScreen(world) {
   const th = theme(world);
   const dark = world === 5 || world === 9;
-  const W = window.innerWidth;
+  const W = appW();
   const cols = Math.max(2, Math.min(6, Math.floor((W - 40 - 32) / 150)));
   const range = worldRange(world);
   const grid = h('div', { class: 'missions-grid', style: { '--cols': cols } });
@@ -534,7 +564,7 @@ function workshopScreen(index) {
   const teamSize = Math.min(Math.max(1, m.team), state.team.length);
   state.selected = Math.min(Math.max(0, state.selected), teamSize - 1);
   const robot = state.team[state.selected];
-  const portrait = appH() > window.innerWidth;
+  const portrait = appH() > appW();
   const failures = state.failures[m.id] || 0;
   const showHint = m.hard || failures >= 1;
   const header = h('div', { class: 'row', style: { gap: '14px' } },
@@ -625,7 +655,7 @@ function garagePanel(robot) {
 }
 function partsPanel(robot) {
   const avail = available();
-  const W = (appH() > window.innerWidth ? window.innerWidth - 32 : (window.innerWidth - 48) * 0.62);
+  const W = (appH() > appW() ? appW() - 32 : (appW() - 48) * 0.62);
   const colsFor = (n) => Math.max(2, Math.min(n, Math.floor(W / 104)));
   const card = (id, sel, locked, onClick, height, pic) => {
     const c = h('button', { class: 'part-card' + (sel ? ' sel' : '') + (locked ? ' locked' : ''), style: { height: height + 'px' }, 'aria-label': locked ? `${partName(id)} – ${t('workshop_locked')}` : partName(id) },
@@ -773,7 +803,7 @@ function applySolution(m) {
 function runScreen(index) {
   const se = state.session;
   const m = se.mission;
-  const narrow = window.innerWidth < 600;
+  const narrow = appW() < 600;
   const scene = canvas((g, w, hh) => {
     const s = state.session; if (!s) return;
     const now = performance.now();
@@ -815,7 +845,7 @@ function resultCard(f) {
   const se = state.session; const m = se.mission;
   const s = state.screen; const next = s.index + 1;
   const hasNext = next < state.missions.length && (isUnlocked(next) || f.state.k === 'Success');
-  const narrow = window.innerWidth < 600;
+  const narrow = appW() < 600;
   const card = h('div', { class: 'result-card' });
   if (f.state.k === 'Success') {
     card.append(canvas((g, w, hh) => {
@@ -846,7 +876,7 @@ function parentScreen() {
   const settings = h('div', { class: 'info-card', style: { gap: '12px' } }, h('div', { class: 'h-l' }, t('parent_settings_title')),
     h('div', { class: 'row' }, h('div', { class: 'b-l grow' }, t('parent_sound')), sw), reset,
     h('div', { class: 'b-m soft' }, t('parent_version', VERSION)));
-  const two = window.innerWidth >= 840;
+  const two = appW() >= 840;
   const content = two
     ? h('div', { class: 'row', style: { alignItems: 'flex-start', gap: '16px' } },
       h('div', { style: { flex: 0.62, display: 'flex', flexDirection: 'column', gap: '12px' } }, info(t('parent_about_title'), t('parent_about')), info(t('parent_play_title'), t('parent_play')), info(t('parent_data_title'), t('parent_data'))),
@@ -862,11 +892,19 @@ function resetProgress() {
 }
 
 // ---- Látható magasság (a beépített böngészők – pl. Messenger – sávjai nélkül)
+const realH = () => (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+const realW = () => (window.visualViewport ? window.visualViewport.width : window.innerWidth);
+/** Kényszerített fekvő nézet (iPhone): álló készüléken a játékot 90°-kal elforgatva rajzoljuk. */
+const rotated90 = () => !!store.forceLandscape && realH() > realW();
+function appW() { return rotated90() ? realH() : realW(); }
+function appH() { return rotated90() ? realW() : realH(); }
 function setAppHeight() {
-  const hgt = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  document.documentElement.style.setProperty('--app-h', Math.round(hgt) + 'px');
+  document.documentElement.style.setProperty('--app-h', Math.round(realH()) + 'px');
+  document.documentElement.style.setProperty('--app-w', Math.round(realW()) + 'px');
+  document.documentElement.classList.toggle('rot90', rotated90());
+  document.documentElement.classList.toggle('is-portrait', appH() > appW());
+  document.documentElement.classList.toggle('is-short', appH() <= 520 && appW() > appH());
 }
-const appH = () => (window.visualViewport ? window.visualViewport.height : window.innerHeight);
 setAppHeight();
 window.visualViewport?.addEventListener('resize', () => { setAppHeight(); clearTimeout(resizeT); resizeT = setTimeout(() => { if (state.screen.k !== 'run') render(); }, 150); });
 

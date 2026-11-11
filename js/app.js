@@ -4,7 +4,7 @@ import { loadArt, img, Paths, C, ROBOT_COLORS, drawFit, drawStretch, drawTiled, 
 import { drawRobot, pose, drawMobilityThumb, drawArmThumb, G } from './robot.js';
 import { drawMission, newCamera, theme } from './scene.js';
 
-const VERSION = '1.5.8-web';
+const VERSION = '1.5.9-web';
 
 // ---- Szövegek ------------------------------------------------------------------------------
 let STR = {};

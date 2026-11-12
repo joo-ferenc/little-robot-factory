@@ -4,7 +4,7 @@ import { loadArt, img, Paths, C, ROBOT_COLORS, drawFit, drawStretch, drawTiled, 
 import { drawRobot, pose, drawMobilityThumb, drawArmThumb, G } from './robot.js';
 import { drawMission, newCamera, theme } from './scene.js';
 
-const VERSION = '1.5.9-web';
+const VERSION = '1.5.10-web';
 
 // ---- Szövegek ------------------------------------------------------------------------------
 let STR = {};
@@ -462,7 +462,7 @@ function missionsScreen(world) {
 function missionCard(i) {
   const m = state.missions[i];
   const unlocked = isUnlocked(i); const done = state.completed.has(m.id); const next = unlocked && !done;
-  const card = h('button', { class: 'mission-card' + (unlocked ? '' : ' locked') + (next ? ' next' : ''), 'aria-label': `${i + 1}. ${missionTitle(m)}` });
+  const card = h('div', { class: 'mission-card' + (unlocked ? '' : ' locked') + (next ? ' next' : ''), role: 'button', tabindex: '0', 'aria-label': `${i + 1}. ${missionTitle(m)}` });
   const top = h('div', { class: 'top' }, h('div', { class: 'num' + (unlocked ? '' : ' off') }, i + 1));
   if (unlocked && m.isTeam) top.append(h('span', { class: 'team-badge', title: t('mission_team_badge', m.team) }, icon('team', ''), m.team));
   if (unlocked && m.hard) top.append(h('img', { class: 'ico-s', src: iconSrc('bulb'), title: t('mission_hard_badge'), alt: '' }));
@@ -472,7 +472,7 @@ function missionCard(i) {
   card.append(top);
   if (unlocked) {
     const shown = distinctBy(m.obstacles.filter((o) => o.type !== 'BUTTON' && o.type !== 'LINKED_GATE'), (o) => o.type + [...o.required].join());
-    card.append(obstacleThumbRow(shown, m.world, 3, 38, 30, 'm' + i), h('div', { class: 'l-m clamp2' }, missionTitle(m)));
+    card.append(obstacleThumbRow(shown, m.world, 3, 38, 30, 'm' + i, () => { play('tap'); openMission(i); }), h('div', { class: 'l-m clamp2' }, missionTitle(m)));
   } else card.append(h('div'));
   card.addEventListener('click', (e) => { if (e.target.closest('.thumbs')) return; if (!unlocked) return; play('tap'); openMission(i); });
   return card;
@@ -548,13 +548,34 @@ function obstacleThumb(o, world, w, hh) {
   return c;
 }
 /** „+n”, ha nem fér ki mind; a sorra koppintva kinyílik. [key] a kinyitott állapot megőrzéséhez. */
-function obstacleThumbRow(list, world, maxShown, w, hh, key) {
+function obstacleThumbRow(list, world, maxShown, w, hh, key, onTap = null) {
   const open = state.expanded.has(key);
   const overflow = list.length > maxShown;
   const shown = open || !overflow ? list : list.slice(0, maxShown);
   const row = h('div', { class: 'thumbs' + (open ? ' open' : '') }, ...shown.map((o) => obstacleThumb(o, world, w, hh)));
   if (overflow && !open) row.append(h('div', { class: 'more', style: { width: hh + 'px', height: hh + 'px' } }, `+${list.length - maxShown}`));
-  if (overflow) row.addEventListener('click', (e) => { e.stopPropagation(); play('tap'); if (open) state.expanded.delete(key); else state.expanded.add(key); render(); });
+  const toggle = () => { play('tap'); if (open) state.expanded.delete(key); else state.expanded.add(key); render(); };
+  if (!onTap) {
+    // műhely: koppintásra nyílik / csukódik
+    if (overflow) row.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+    return row;
+  }
+  // küldetéskártya: rövid koppintás = küldetés indítása; hosszú nyomás = kinyitás / becsukás; kinyitva oldalra húzható
+  let timer = 0; let sx = 0; let sy = 0; let longDone = false; let moved = false;
+  row.addEventListener('pointerdown', (e) => {
+    sx = e.clientX; sy = e.clientY; longDone = false; moved = false;
+    clearTimeout(timer);
+    if (overflow) timer = setTimeout(() => { longDone = true; navigator.vibrate?.(15); toggle(); }, 450);
+  });
+  row.addEventListener('pointermove', (e) => { if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) { moved = true; clearTimeout(timer); } });
+  const end = () => clearTimeout(timer);
+  row.addEventListener('pointerup', end); row.addEventListener('pointercancel', () => { moved = true; end(); }); row.addEventListener('pointerleave', end);
+  row.addEventListener('contextmenu', (e) => e.preventDefault());
+  row.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (longDone || moved) return;   // hosszú nyomás vagy húzás után nem indul a küldetés
+    onTap();
+  });
   return row;
 }
 

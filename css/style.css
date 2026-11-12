@@ -97,7 +97,9 @@ canvas { display: block; }
 .thumbs { display: flex; align-items: center; gap: 3px; }
 .thumbs canvas { border-radius: 10px; }
 .thumbs .more { border-radius: 50%; background: #fff; border: 2px solid var(--outline); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex: none; }
-.thumbs.open { overflow-x: auto; max-width: 100%; }
+.thumbs.open { overflow-x: auto; max-width: 100%; overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
+.thumbs.open::-webkit-scrollbar { display: none; }
+.mission-card { cursor: pointer; }
 
 /* ---- műhely ---- */
 .ws-body { flex: 1; min-height: 0; display: flex; gap: 16px; }
